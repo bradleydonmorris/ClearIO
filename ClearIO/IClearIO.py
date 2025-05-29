@@ -70,9 +70,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -87,9 +86,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -109,9 +107,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -131,9 +128,27 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
+		"""
+		raise NotImplementedError()
+
+	def ListAllFilesModifiedSince(self, fullDirectoryPath:Path|str, sinceTimestamp:int) -> list[TypedPath]:
+		"""
+		Retrieves all file paths within a directory with a modified time equal to or grater than sinceTimestamp. This method is not recursive.
+
+		Parameters
+		----------
+		fullDirectoryPath : Path or str
+			The full path to the directory to retrieve.
+		
+		sinceTimestamp : int
+			The timestamp (nix epoch) to compare to the file's modified time.
+
+		Returns
+		-------
+		list[TypedPath]
+			A list of files within the directory.
 		"""
 		raise NotImplementedError()
 
@@ -148,9 +163,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -165,9 +179,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -187,9 +200,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -209,9 +221,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -226,9 +237,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files and directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -243,9 +253,8 @@ class IClearIO:
 
 		Returns
 		-------
-		list[Path or str]
+		list[TypedPath]
 			A list of files and directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
 		"""
 		raise NotImplementedError()
 
@@ -298,7 +307,7 @@ class IClearIO:
 
 		Parameters
 		----------
-		paths : list[Path or str]
+		paths : list[TypedPath]
 			A list of paths to attempt to parse timestamps from. Can be directories, file, or a combination of both.
 		
 		prefixesBeforeTimestamp : list[str]

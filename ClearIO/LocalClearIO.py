@@ -89,6 +89,16 @@ class LocalClearIO(IClearIO):
 					returnValue.append(item)
 		return sorted(returnValue)
 
+	def ListAllFilesModifiedSince(self, fullDirectoryPath:Path|str, sinceTimestamp:int) -> list[TypedPath]:
+		returnValue:list[TypedPath] = list[TypedPath]()
+		if (isinstance(fullDirectoryPath, str)):
+			fullDirectoryPath = Path(fullDirectoryPath)
+		for item in fullDirectoryPath.iterdir():
+			if (item.is_file()
+		 		and item.stat().st_mtime >= sinceTimestamp):
+					returnValue.append(TypedPath(item, IOObjectType.File, item.stat().st_mtime))
+		return sorted(returnValue)
+
 	def ListAllFiles(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str)):

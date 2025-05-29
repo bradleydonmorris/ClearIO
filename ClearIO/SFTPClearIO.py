@@ -13,6 +13,7 @@ with warnings.catch_warnings(action="ignore", category=CryptographyDeprecationWa
 	import paramiko
 from paramiko import PKey
 from paramiko import SFTPAttributes
+from datetime import datetime
 
 class SFTPAuthenticationType(Enum):
 	Password = 1
@@ -278,6 +279,26 @@ class SFTPClearIO(IClearIO):
 					returnValue.append(item)
 		return sorted(returnValue)
 
+	def ListAllFilesModifiedSince(self, fullDirectoryPath:Path|str, sinceTimestamp:int) -> list[TypedPath]:
+		returnValue:list[TypedPath] = list[TypedPath]()
+		if (not isinstance(fullDirectoryPath, str)):
+			fullDirectoryPath = str(fullDirectoryPath)
+		if (fullDirectoryPath == "." or fullDirectoryPath == ""):
+			fullDirectoryPath = "/"
+		with paramiko.Transport((self.HostName, self.Port)) as transport:
+			match self.AuthenticationType:
+				case SFTPAuthenticationType.Password:
+					transport.connect(username=self.UserName, password=self.Password)
+				case SFTPAuthenticationType.KeyFile:
+					transport.connect(username=self.UserName, pkey=self.__GetKey__())
+			with paramiko.SFTPClient.from_transport(transport) as sftp:
+				for item in sftp.listdir_attr(fullDirectoryPath):
+					fullPath:PurePosixPath = PurePosixPath(fullDirectoryPath).joinpath(item.filename)
+					if (not stat.S_ISDIR(item.st_mode)
+		 				and item.st_mtime >= sinceTimestamp):
+						returnValue.append(TypedPath(fullPath, IOObjectType.File, item.st_mtime))
+		return sorted(returnValue)
+
 	def ListAllFiles(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (not isinstance(fullDirectoryPath, str)):
@@ -403,9 +424,11 @@ class SFTPClearIO(IClearIO):
 					case SFTPAuthenticationType.KeyFile:
 						transport.connect(username=self.UserName, pkey=self.__GetKey__())
 				with paramiko.SFTPClient.from_transport(transport) as sftp:
-					with io.BytesIO() as contentsIO:
-						sftp.getfo(fullFilePath, contentsIO)
-						returnValue = contentsIO.read()
+					with sftp.open(fullFilePath, "rb") as remoteFile:
+						returnValue = remoteFile.read()
+					#with io.BytesIO() as contentsIO:
+					#	sftp.getfo(fullFilePath, contentsIO)
+					#	returnValue = contentsIO.read()
 		except Exception as e:
 			exception = e
 		if (exception is not None):
@@ -465,5 +488,34 @@ class SFTPClearIO(IClearIO):
 		for item in paths:
 			returnValue.append(TimestampedPath(item, prefixesBeforeTimestamp, timestampFormat))
 		return sorted(returnValue)
+
+	def GetFileProperties(self, filePath:Path|str) -> dict:
+		returnValue:dict|None = None
+		try:
+			if (not isinstance(filePath, str)):
+				filePath = str(filePath)
+			if (filePath == "." or filePath == ""):
+				filePath = "/"
+			with paramiko.Transport((self.HostName, self.Port)) as transport:
+				match self.AuthenticationType:
+					case SFTPAuthenticationType.Password:
+						transport.connect(username=self.UserName, password=self.Password)
+					case SFTPAuthenticationType.KeyFile:
+						transport.connect(username=self.UserName, pkey=self.__GetKey__())
+				with paramiko.SFTPClient.from_transport(transport) as sftp:
+					sftpAttributes:SFTPAttributes = sftp.stat(filePath)
+					returnValue = {
+						"st_size": sftpAttributes.st_size,
+						"st_uid": sftpAttributes.st_uid,
+						"st_gid": sftpAttributes.st_gid,
+						"st_mode": sftpAttributes.st_mode,
+						"st_atime": sftpAttributes.st_atime,
+						"st_mtime": sftpAttributes.st_mtime,
+						"ModifiedTimestamp": sftpAttributes.st_mtime,
+						"ModifiedTime": datetime.fromtimestamp(sftpAttributes.st_mtime)
+					}
+		except:
+			returnValue = None
+		return returnValue
 
 __all__ = ["SFTPAuthenticationType", "SFTPKeyType", "SFTPClearIO"]

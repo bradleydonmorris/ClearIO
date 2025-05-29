@@ -17,7 +17,7 @@ class S3ClearIO(IClearIO):
 	AccessKey:str|None = None
 	SecretAccessKey:str|None = None
 
-	def __init__(self, bucket:str, accessKey:str, secretAccessKey:str) -> None:
+	def __init__(self, bucket:str, accessKey:str, secretAccessKey:str, endPoint:str|None = None) -> None:
 		if (bucket is None):
 			raise ValueError("bucket is required")
 		if (accessKey is None):
@@ -27,10 +27,17 @@ class S3ClearIO(IClearIO):
 		self.Bucket = bucket
 		self.AccessKey = accessKey
 		self.SecretAccessKey = secretAccessKey
-		self.S3Resource = boto3.resource(
-			"s3",
-			aws_access_key_id=self.AccessKey,
-			aws_secret_access_key=self.SecretAccessKey)
+		if (endPoint is None):
+			self.S3Resource = boto3.resource(
+				"s3",
+				aws_access_key_id=self.AccessKey,
+				aws_secret_access_key=self.SecretAccessKey)
+		else:
+			self.S3Resource = boto3.resource(
+				"s3",
+				endpoint_url=endPoint,
+				aws_access_key_id=self.AccessKey,
+				aws_secret_access_key=self.SecretAccessKey)
 		self.S3Bucket = self.S3Resource.Bucket(self.Bucket)
 
 	def SplitPathToPaths(self, fullPath:Path|str) -> list[str]:
@@ -79,17 +86,6 @@ class S3ClearIO(IClearIO):
 		return returnValue
 
 	def CreateDirectory(self, fullDirectoryPath:Path|str, createParents:bool = True) -> None:
-		"""
-		Creates a directory
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to create.
-
-		createParents : bool
-			Indicates whether to create the parent directories. If False and parent directories are missing, an IOError is raised.
-		"""
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
 		if (not self.Exists(fullDirectoryPath.parent)
@@ -105,14 +101,6 @@ class S3ClearIO(IClearIO):
 		self.S3Bucket.put_object(Key=str(pathString))
 		
 	def RemoveDirectory(self, fullDirectoryPath:Path|str) -> None:
-		"""
-		Removes the specified directory and all child objects within the directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to remove.
-		"""
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
 		fullDirectoryPath = str(fullDirectoryPath)
@@ -120,14 +108,6 @@ class S3ClearIO(IClearIO):
 			o.delete()
 
 	def EmptyDirectory(self, fullDirectoryPath:Path|str) -> None:
-		"""
-		Removes all child objects within the directory, but does not remove the directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to clean.
-		"""
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
 		fullDirectoryPath = str(fullDirectoryPath)
@@ -138,20 +118,6 @@ class S3ClearIO(IClearIO):
 				o.delete()
 
 	def ListAllDirectories(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
-		"""
-		Retrieves all directory paths within a directory. This method is not recursive.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
@@ -181,20 +147,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListAllDirectoriesRecursively(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
-		"""
-		Recursively retrieves all directory paths within a directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
@@ -223,25 +175,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListDirectories(self, fullDirectoryPath:Path|str, pattern:str|None = None) -> list[TypedPath]:
-		"""
-		Retrieves directory paths within a directory where the directory name matches a regex pattern. This method is not recursive.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		pattern : str
-			The pattern to use when selecting which files to include in the results.
-			Note: This is regex based. Not based on typical file name wildcards.
-			Cf. https://medium.com/@jamestjw/parsing-file-names-using-regular-expressions-3e85d64deb69
-
-		Returns
-		-------
-		list[Path or str]
-			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str)):
 			fullDirectoryPath = Path(fullDirectoryPath)
@@ -256,25 +189,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListDirectoriesRecursively(self, fullDirectoryPath:Path|str, pattern:str|None = None) -> list[TypedPath]:
-		"""
-		Recursively retrieves directory paths within a directory where the directory name matches a regex pattern.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		pattern : str
-			The pattern to use when selecting which files to include in the results.
-			Note: This is regex based. Not based on typical file name wildcards.
-			Cf. https://medium.com/@jamestjw/parsing-file-names-using-regular-expressions-3e85d64deb69
-
-		Returns
-		-------
-		list[Path or str]
-			A list of directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str)):
 			fullDirectoryPath = Path(fullDirectoryPath)
@@ -288,21 +202,33 @@ class S3ClearIO(IClearIO):
 					returnValue.append(item)
 		return sorted(returnValue)
 
+	def ListAllFilesModifiedSince(self, fullDirectoryPath:Path|str, sinceTimestamp:int) -> list[TypedPath]:
+		returnValue:list[TypedPath] = list[TypedPath]()
+		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
+			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
+		fullDirectoryPath = str(fullDirectoryPath)
+		if (fullDirectoryPath == "." or fullDirectoryPath == "./"):
+			fullDirectoryPath = ""
+		asPath:PurePosixPath = PurePosixPath(fullDirectoryPath)
+		foundObjects:any = None
+		if (fullDirectoryPath is None or fullDirectoryPath == ""):
+			foundObjects = self.S3Bucket.objects.all()
+		else:
+			foundObjects = self.S3Bucket.objects.filter(Prefix=fullDirectoryPath)
+		for o in foundObjects:
+			if (o.key != "./"
+			and o.key != fullDirectoryPath
+			and o.key != f"{fullDirectoryPath}/"
+			and ("LastModified" in o
+				and int(o["LastModified"].timestamp()) >= sinceTimestamp)):
+				if (not o.key.endswith("/")
+					and "/" not in str(PurePosixPath(o.key).relative_to(asPath))):
+					typedPath:TypedPath = TypedPath(o.key, IOObjectType.File)
+					if (not any(str(path) == str(typedPath) for path in returnValue)):
+						returnValue.append(typedPath)
+		return sorted(returnValue)
+
 	def ListAllFiles(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
-		"""
-		Retrieves all file paths within a directory. This method is not recursive.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
 			fullDirectoryPath = PurePosixPath(fullDirectoryPath)
@@ -327,20 +253,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListAllFilesRecursively(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
-		"""
-		Recursively retrieves all file paths within a directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		fullDirectoryPath:Path = Path("asb")
 		if (isinstance(fullDirectoryPath, str) or isinstance(fullDirectoryPath, Path)):
@@ -364,25 +276,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListFiles(self, fullDirectoryPath:Path|str, pattern:str|None = None) -> list[TypedPath]:
-		"""
-		Retrieves file paths within a directory where the file name matches a regex pattern. This method is not recursive.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		pattern : str
-			The pattern to use when selecting which files to include in the results.
-			Note: This is regex based. Not based on typical file name wildcards.
-			Cf. https://medium.com/@jamestjw/parsing-file-names-using-regular-expressions-3e85d64deb69
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str)):
 			fullDirectoryPath = Path(fullDirectoryPath)
@@ -397,25 +290,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListFilesRecursively(self, fullDirectoryPath:TypedPath|Path|str, pattern:str|None = None) -> list[TypedPath]:
-		"""
-		Recursively retrieves file paths within a directory where the file name matches a regex pattern.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		pattern : str
-			The pattern to use when selecting which files to include in the results.
-			Note: This is regex based. Not based on typical file name wildcards.
-			Cf. https://medium.com/@jamestjw/parsing-file-names-using-regular-expressions-3e85d64deb69
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		if (isinstance(fullDirectoryPath, str)):
 			fullDirectoryPath = Path(fullDirectoryPath)
@@ -430,20 +304,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def List(self, fullDirectoryPath:Path|str) -> list[TypedPath]:
-		"""
-		Retrieves all files and directories paths within a directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files and directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		for typedPath in self.ListAllDirectories(fullDirectoryPath):
 			if (not any(str(path) == str(typedPath) for path in returnValue)):
@@ -454,20 +314,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def ListRecursively(self, fullDirectoryPath:TypedPath|Path|str) -> list[TypedPath]:
-		"""
-		Recursively retrieves all files and directories paths within a directory.
-
-		Parameters
-		----------
-		fullDirectoryPath : Path or str
-			The full path to the directory to retrieve.
-
-		Returns
-		-------
-		list[Path or str]
-			A list of files and directories within the directory.
-			Return type is determined by the type of fullDirectoryPath.
-		"""
 		returnValue:list[TypedPath] = list[TypedPath]()
 		for typedPath in self.ListAllDirectoriesRecursively(fullDirectoryPath):
 			if (not any(str(path) == str(typedPath) for path in returnValue)):
@@ -478,20 +324,6 @@ class S3ClearIO(IClearIO):
 		return sorted(returnValue)
 
 	def GetFile(self, fullPath:Path|str) -> bytes:
-		"""
-		Retrieves the bytes of a file.
-		Note: These bytes can be used in PutFile to perform a copy style of operation.
-
-		Parameters
-		----------
-		fullPath : Path or str
-			The full path to the file to retrieve.
-			
-		Returns
-		-------
-		bytes
-			A byte array of the contents of the file.
-		"""
 		if (isinstance(fullPath, str) or isinstance(fullPath, Path)):
 			fullPath = PurePosixPath(fullPath)
 		pathString:str = str(fullPath)
@@ -500,35 +332,16 @@ class S3ClearIO(IClearIO):
 		return self.S3Resource.Object(self.Bucket, pathString).get()["Body"].read()
 
 	def PutFile(self, fullPath:Path|str, content:bytes):
-		"""
-		Writes a byte array to a file.
-		Note: contents may be the output of GetFile to perform a copy style of operation.
-
-		Parameters
-		----------
-		fullPath : Path or str
-			The full path to the file to write.
-
-		contents : bytes
-			The array of bytes to write to the file.
-		"""
 		if (isinstance(fullPath, str) or isinstance(fullPath, Path)):
 			fullPath = PurePosixPath(fullPath)
-		parentPathString:str = f"{str(fullPath.parent)}/"
-		if (not self.Exists(parentPathString)):
-			raise ValueError("Parent does not exists")
+		if ("/" in str(fullPath)):
+			parentPathString:str = f"{str(fullPath.parent)}/"
+			if (not self.Exists(parentPathString)):
+				raise ValueError("Parent does not exists")
 		pathString:str = str(fullPath)
 		self.S3Resource.Object(self.Bucket, pathString).put(Body=content)
 
 	def RemoveFile(self, fullFilePath:Path|str) -> None:
-		"""
-		Removes the specified file.
-
-		Parameters
-		----------
-		fullFilePath : Path or str
-			The full path to the file to remove.
-		"""
 		if (isinstance(fullFilePath, str) or isinstance(fullFilePath, Path)):
 			fullFilePath = PurePosixPath(fullFilePath)
 		fullFilePath = str(fullFilePath)
@@ -539,6 +352,24 @@ class S3ClearIO(IClearIO):
 		returnValue:list[TimestampedPath] = list[TimestampedPath]()
 		for item in paths:
 			returnValue.append(TimestampedPath(item, prefixesBeforeTimestamp, timestampFormat))
+		return returnValue
+
+	def GetLastObjectModified(self, prefix:str) -> dict|None:
+		returnValue:dict|None = None
+		client = boto3.client(
+			"s3",
+			aws_access_key_id=self.AccessKey,
+			aws_secret_access_key=self.SecretAccessKey)
+		paginator = client.get_paginator( "list_objects_v2" )
+		page_iterator = paginator.paginate(Bucket=self.Bucket, Prefix=prefix)
+		latest = None
+		for page in page_iterator:
+			if "Contents" in page:
+				latest2 = max(page['Contents'], key=lambda x: x['LastModified'])
+				if latest is None or latest2['LastModified'] > latest['LastModified']:
+					latest = latest2
+		if (latest is not None):
+			returnValue = latest
 		return returnValue
 
 __all__ = ["S3ClearIO"]
